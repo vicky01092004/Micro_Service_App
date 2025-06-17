@@ -1,0 +1,44 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Log in to Docker Hub
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+    # Build and push user-service
+    - name: Build and Push user-service
+      run: |
+        docker build -t vigneshwaranj/user-service ./user-service
+        docker push vigneshwaranj/user-service
+
+    # Build and push product-service
+    - name: Build and Push product-service
+      run: |
+        docker build -t vigneshwaranj/product-service ./product-service
+        docker push vigneshwaranj/product-service
+
+    # Set up KUBECONFIG
+    - name: Set up kubeconfig
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+
+    # Deploy to Kubernetes
+    - name: Deploy to Kubernetes
+      run: |
+        kubectl apply -f ./k8s-manifests/
+
+
